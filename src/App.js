@@ -10,45 +10,57 @@ import Support from './components/Support'
 
 function App() {
   const [startingPoint, setStartingPoint] = useState({})
-  const [searchUrl, setSearchUrl] = useState('')
   const [routeId, setRouteId] = useState('');
   const [stravaToken, setStravaToken] = useState('')
+  const buttonText= 'Get Directions'
+  const baseURL = "https://www.strava.com"
 
-  useEffect(async () => {
-
-    const res = await axios.get('/stravatoken')
-    setStravaToken(res.data)
-    if(window.location.href.includes('routeId')) {
-      setRouteId(window.location.href.match(/(?<==)[\s\S]*$/g)[0])
-    }
-    
-    document.addEventListener("addressinput", (event) => {
-      handleChangeStartingAddress(event)
-    })
+  useEffect(() => {
+      axios.post(`${baseURL}/oauth/token?client_id=${process.env.REACT_APP_CLIENT_ID}&client_secret=${process.env.REACT_APP_CLIENT_SECRET}&refresh_token=${process.env.REACT_APP_REFRESH_TOKEN}&grant_type=refresh_token`)
+        .then(function(response) {            
+            setStravaToken(response.data.access_token)
+        }).catch((e) => {
+          console.error(`sorry there was an error`)
+      })
+          
+      if(window.location.href.includes('routeId')) {
+        setRouteId(window.location.href.match(/(?<==)[\s\S]*$/g)[0])
+      }
+      
+      document.addEventListener("addressinput", (event) => {
+        handleChangeStartingAddress(event)
+      })
 
   }, []);
 
-  const getTheGPX = async (brandNewAccessToken) => {
-    
-    let res = await axios.post('/downloadGPX', `message=${routeId}&accessToken=${brandNewAccessToken}`, 
-    { 
-      'Accept': '*/*',
+  const getTheGPX = async (brandNewAccessToken) => {   
+    let gpxData, startingData, latLongExtraction;
+    let routeLatLong = []
+    await axios.get(`${baseURL}/api/v3/routes/${routeId}/export_gpx?access_token=${brandNewAccessToken}`)
+    .then((response) => {
+        console.log('here is your stuff')
+        gpxData = response.data
+    })
+    .catch((e) => {
+        console.log(`there was an error with the GPX`)
     })
     
-    window.location.href = searchUrl
-    window.open(`https://www.google.com/maps/dir/${startingPoint.lat},${startingPoint.lng}/${res.data[0]},${res.data[1]}`)
-    return res.data
+    startingData = gpxData.match(/<trkpt[^>]*/g)[0]
+    latLongExtraction = [...startingData.matchAll(/="[^"]*/g)];
+    routeLatLong.push(latLongExtraction[0]['0'].replace(/[^0-9-.]/g, ''))
+    routeLatLong.push(latLongExtraction[1]['0'].replace(/[^0-9-.]/g, ''))
+    
+    window.open(`https://www.google.com/maps/dir/${startingPoint.lat},${startingPoint.lng}/${routeLatLong[0]},${routeLatLong[1]}`)
+
+    return 
   }
 
   const handleChange = (event) => {
     const myUrl = new URL(window.location.href)
-    let params = new URLSearchParams(myUrl.search)
-    if(params) {
-      myUrl.searchParams.delete('routeId')
-    }
-    myUrl.searchParams.append('routeId', event.target.value)
-
-    setSearchUrl(myUrl)
+    const params = new URLSearchParams(myUrl.search);
+    
+    params.set('routeId', event.target.value)
+    window.history.replaceState({}, '', `${myUrl.pathname}?${params}`);
     setRouteId(event.target.value);
   }
 
@@ -60,7 +72,7 @@ function App() {
     e.preventDefault()
     getTheGPX(stravaToken)
   }
-  
+   
   return (
     <div className="App">
       <h1>Driving Directions</h1>
@@ -73,7 +85,10 @@ function App() {
         autoComplete="off"
       >
       <label>
-          <PlacesAutocomplete/>
+          <PlacesAutocomplete
+            className="addressInput"
+            value={startingPoint}
+          />
           <br />
           <br />
           <TextField 
@@ -92,8 +107,10 @@ function App() {
           type="submit" 
           value="Submit" 
           variant="contained" 
-          onClick={handleSubmit}>
-          Submit
+          onClick={
+            handleSubmit
+          }>
+          {buttonText}
         </Button>
     </Box>     
     <br />

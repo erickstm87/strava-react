@@ -13,7 +13,7 @@ const GMaps = (props) => {
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: REACT_APP_MAPS_API_KEY
+    googleMapsApiKey: process.env.REACT_APP_MAPS_API_KEY
   })
 
 

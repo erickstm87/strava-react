@@ -59,7 +59,6 @@ export const PlacesAutocomplete = () => {
     const renderSuggestions = () =>
       data.map((suggestion) => {
         const {
-          place_id,
           structured_formatting: { main_text, secondary_text },
         } = suggestion;
   
@@ -90,7 +89,6 @@ export const PlacesAutocomplete = () => {
                 "display": "flex",
                 "flexDirection": "column",
                 "alignItems": "center",
-                "bgcolor": 'background.paper',
                 "bgcolor": 'background.paper',
                 }}>
                 <List>
